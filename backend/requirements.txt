@@ -1,0 +1,33 @@
+# Q-SHIELD Backend Requirements
+# Smart India Hackathon 2026 - Problem Statement SIH26141
+
+# Web framework and API
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.4.0
+pydantic-settings>=2.0.0
+
+# Quantum computing
+qiskit>=1.0.0
+qiskit-aer>=0.13.0
+qiskit-ibm-runtime>=0.20.0
+
+# Scientific computing
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Database
+sqlalchemy>=2.0.0
+
+# Configuration
+python-dotenv>=1.0.0
+python-multipart>=0.0.6
+
+# HTTP client
+httpx>=0.25.0
+
+# Structured logging
+structlog>=23.1.0
+
+# Rate limiting and security
+slowapi>=0.1.9
