@@ -90,10 +90,10 @@ echo  [OK] Backend ready.
 REM ---------- 4. Setup frontend deps ----------
 echo  [4/6] Setting up frontend...
 
-if not exist "%ROOT%frontend\node_modules" (
-  echo        Installing npm packages (first run, may take a minute)...
+if not exist "%ROOT%frontend\node_modules\" (
+  echo        Installing npm packages [first run, may take a minute]
   pushd "%ROOT%frontend"
-  call npm install --loglevel=error 2>nul
+  call npm install --loglevel=error
   popd
 )
 echo  [OK] Frontend ready.
