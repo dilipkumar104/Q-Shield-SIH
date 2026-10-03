@@ -2,11 +2,10 @@
 
 <div align="center">
 
-![Q-SHIELD Banner](https://img.shields.io/badge/SIH2026-SIH26141-blue?style=for-the-badge&logo=shield)
 ![Status](https://img.shields.io/badge/Status-Operational-brightgreen?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)
 
-**Smart India Hackathon 2026 (SIH26141) · Egreen Quanta**  
+**Smart India Hackathon 2026 - Egreen Quanta**  
 *Blockchain & Cybersecurity Domain — Statistical Quantum Threat Detection & Non-Repudiation Forensic Platform*
 
 [Features](#-key-features) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [Protocols](#-supported-protocols) • [Attack Lab & Detection](#-attack-vectors--statistical-detection) • [API Reference](#-api-endpoints)
@@ -175,7 +174,4 @@ SIH26141/
 
 ## 👥 Team & Acknowledgments
 
-- **Team**: Egreen Quanta
-- **Hackathon**: Smart India Hackathon (SIH 2026)
-- **Problem Statement ID**: SIH26141
 - **Domain**: Blockchain & Cybersecurity

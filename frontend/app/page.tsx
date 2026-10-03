@@ -3,315 +3,68 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 
-// We'll use a mock SVG for the circuit, histogram, etc.
-const TeleportationCircuitSVG = () => (
-  <svg width="100%" height="200" viewBox="0 0 800 200" className="bg-surface-container-low border border-outline-variant p-4">
-    <text x="20" y="40" fill="#cbc3d7" fontSize="12" fontFamily="monospace">q[0] |ψ⟩ ───■──────────H───────[M]──────────────</text>
-    <text x="20" y="80" fill="#cbc3d7" fontSize="12" fontFamily="monospace">q[1] |0⟩ ───(+)───■────────────[M]──────────────</text>
-    <text x="20" y="120" fill="#cbc3d7" fontSize="12" fontFamily="monospace">q[2] |0⟩ ────────(+)───────────────X───Z───|ψ⟩</text>
-    <text x="20" y="160" fill="#cbc3d7" fontSize="12" fontFamily="monospace">c[2] 00 ═══════════════════════════╩═══╩══════</text>
-    {/* Subsystem boundaries annotations */}
-    <rect x="70" y="10" width="300" height="100" fill="none" stroke="#4edea3" strokeDasharray="4 4" strokeWidth="1" />
-    <text x="80" y="25" fill="#4edea3" fontSize="10" fontFamily="monospace">ALICE TRANSMITTER</text>
-    <rect x="380" y="90" width="150" height="80" fill="none" stroke="#00dce6" strokeDasharray="4 4" strokeWidth="1" />
-    <text x="390" y="105" fill="#00dce6" fontSize="10" fontFamily="monospace">QUANTUM FIBER</text>
-    <rect x="540" y="90" width="200" height="80" fill="none" stroke="#d0bcff" strokeDasharray="4 4" strokeWidth="1" />
-    <text x="550" y="105" fill="#d0bcff" fontSize="10" fontFamily="monospace">BOB RECEIVER</text>
-  </svg>
-);
+type RunResult = { experiment_id: string; quantum_result?: { fidelity?: number; measurement_counts?: Record<string, number> } };
+type DetectionResult = { decision: string; confidence: number; explanation: string; evidence_count: number };
 
-const HistogramSVG = ({ counts }: { counts: Record<string, number> }) => {
-  const max = Math.max(...Object.values(counts), 1);
-  return (
-    <svg width="100%" height="150" viewBox="0 0 400 150" className="mt-4">
-      {Object.entries(counts).map(([state, count], i) => {
-        const height = (count / max) * 100;
-        return (
-          <g key={state} transform={`translate(${i * 80 + 20}, 0)`}>
-            <rect x="0" y={120 - height} width="40" height={height} fill="#00dce6" />
-            <text x="20" y="140" fill="#cbc3d7" fontSize="10" fontFamily="monospace" textAnchor="middle">{state}</text>
-            <text x="20" y={115 - height} fill="#dee2f2" fontSize="10" fontFamily="monospace" textAnchor="middle">{count}</text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-};
+const PROTOCOLS = ["TELEPORTATION", "BB84 QKD", "E91 ENTANGLED", "QDS SIGNATURES"];
+const ATTACKS = ["forgery", "impersonation", "replay", "channel"] as const;
+const circuitQasm = (state: string) => `OPENQASM 3.0;
+include "stdgates.inc";
+qubit[3] q;
+bit[2] c;
+// Q-SHIELD teleportation baseline; source state ${state}
+h q[1];
+cx q[1], q[2];
+cx q[0], q[1];
+h q[0];
+c[0] = measure q[0];
+c[1] = measure q[1];`;
+
+function download(filename: string, content: string, type: string) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+const Circuit = () => <svg width="100%" height="200" viewBox="0 0 800 200" className="bg-surface-container-low border border-outline-variant p-4" aria-label="Quantum teleportation circuit">
+  <text x="20" y="40" fill="#cbc3d7" fontSize="12" fontFamily="monospace">q[0] |ψ⟩ ───■──────────H───────[M]──────────────</text>
+  <text x="20" y="80" fill="#cbc3d7" fontSize="12" fontFamily="monospace">q[1] |0⟩ ───(+)───■────────────[M]──────────────</text>
+  <text x="20" y="120" fill="#cbc3d7" fontSize="12" fontFamily="monospace">q[2] |0⟩ ────────(+)───────────────X───Z───|ψ⟩</text>
+  <text x="20" y="160" fill="#cbc3d7" fontSize="12" fontFamily="monospace">c[2] 00 ═══════════════════════════╩═══╩══════</text>
+  <rect x="70" y="10" width="300" height="100" fill="none" stroke="#4edea3" strokeDasharray="4 4" strokeWidth="1" /><text x="80" y="25" fill="#4edea3" fontSize="10" fontFamily="monospace">ALICE TRANSMITTER</text>
+  <rect x="380" y="90" width="150" height="80" fill="none" stroke="#00dce6" strokeDasharray="4 4" strokeWidth="1" /><text x="390" y="105" fill="#00dce6" fontSize="10" fontFamily="monospace">QUANTUM FIBER</text>
+  <rect x="540" y="90" width="200" height="80" fill="none" stroke="#d0bcff" strokeDasharray="4 4" strokeWidth="1" /><text x="550" y="105" fill="#d0bcff" fontSize="10" fontFamily="monospace">BOB RECEIVER</text>
+</svg>;
+
+function Histogram({ counts }: { counts: Record<string, number> }) {
+  const entries = Object.entries(counts); const max = Math.max(...entries.map(([, value]) => value), 1);
+  return <svg width="100%" height="150" viewBox="0 0 400 150" className="mt-4" aria-label="Measurement histogram">{entries.map(([state, count], index) => {
+    const height = count / max * 100;
+    return <g key={state} transform={`translate(${index * 110 + 45}, 0)`}><rect x="0" y={120 - height} width="55" height={height} fill="#00dce6" /><text x="27" y="140" fill="#cbc3d7" fontSize="10" fontFamily="monospace" textAnchor="middle">{state}</text><text x="27" y={115 - height} fill="#dee2f2" fontSize="10" fontFamily="monospace" textAnchor="middle">{count}</text></g>;
+  })}</svg>;
+}
 
 export default function SimulationLabPage() {
-  const [shots, setShots] = useState(1000);
-  const [seed, setSeed] = useState(42069);
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [metrics, setMetrics] = useState({
-    fidelity: 0.942,
-    qber: 3.2,
-    entropy: 0.88,
-    purity: 0.96,
-  });
-  const [counts, setCounts] = useState<Record<string, number>>({
-    "000": 245,
-    "001": 251,
-    "010": 248,
-    "011": 256,
-  });
+  const [shots, setShots] = useState(1000); const [seed, setSeed] = useState(42069); const [state, setState] = useState("|0>");
+  const [protocol, setProtocol] = useState(PROTOCOLS[0]); const [attackType, setAttackType] = useState<(typeof ATTACKS)[number]>("forgery"); const [attackIntensity, setAttackIntensity] = useState(0.7);
+  const [isExecuting, setIsExecuting] = useState(false); const [investigationId, setInvestigationId] = useState<string | null>(null); const [baselineId, setBaselineId] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState({ fidelity: 0, qber: 0, entropy: 0, purity: 0 }); const [counts, setCounts] = useState<Record<string, number>>({ "0": 0, "1": 0 });
+  const [notice, setNotice] = useState("Configure a baseline, then run it to create an investigation."); const [error, setError] = useState<string | null>(null); const [verdict, setVerdict] = useState<DetectionResult | null>(null);
+  const config = { shots, seed, state, protocol, attackType, attackIntensity };
+  const applyResult = (result: RunResult) => { const fidelity = result.quantum_result?.fidelity ?? 0; setCounts(result.quantum_result?.measurement_counts ?? { "0": 0, "1": 0 }); setMetrics({ fidelity, qber: (1 - fidelity) * 100, entropy: 0, purity: fidelity * fidelity }); };
+  const saveConfig = () => { localStorage.setItem("q-shield-config", JSON.stringify(config)); setNotice("Configuration saved in this browser."); };
+  const loadConfig = () => { const saved = localStorage.getItem("q-shield-config"); if (!saved) { setNotice("No saved configuration yet. Current values are ready to run."); return; } try { const value = JSON.parse(saved); setShots(value.shots ?? 1000); setSeed(value.seed ?? 42069); setState(value.state ?? "|0>"); setProtocol(value.protocol ?? PROTOCOLS[0]); setAttackType(value.attackType ?? "forgery"); setAttackIntensity(value.attackIntensity ?? 0.7); setNotice("Saved configuration loaded."); } catch { setError("The saved configuration could not be read. Please save it again."); } };
+  const runBaseline = async () => { setIsExecuting(true); setError(null); setVerdict(null); try { const investigation = await api.createInvestigation({ name: `EXP-${Date.now().toString().slice(-6)}`, description: `${protocol} baseline for ${state}`, protocol: "teleportation_qds" }); const result = await api.runBaselineExperiment(investigation.id, { state, shots, seed, measurement_basis: "Z" }) as RunResult; if (!result.experiment_id || !result.quantum_result) throw new Error("The server returned an incomplete baseline result."); setInvestigationId(investigation.id); setBaselineId(result.experiment_id); applyResult(result); setNotice(`Baseline complete. Investigation ${investigation.id.slice(0, 8)} is ready for attack testing.`); } catch (caught) { setError(caught instanceof Error ? caught.message : "Baseline execution failed. Check that the backend is running."); } finally { setIsExecuting(false); } };
+  const runAttackAndDetection = async () => { if (!investigationId || !baselineId) { setError("Run a baseline first; the attack needs a real baseline experiment."); return; } setIsExecuting(true); setError(null); try { const attack = await api.runAttackExperiment(investigationId, { baseline_experiment_id: baselineId, state, shots, attack_type: attackType, attack_intensity: attackIntensity, seed, measurement_basis: "Z" }) as RunResult; if (!attack.experiment_id || !attack.quantum_result) throw new Error("The server returned an incomplete attack result."); applyResult(attack); const detection = await api.runDetection(investigationId, { baseline_experiment_id: baselineId, attack_experiment_id: attack.experiment_id, threshold: 0.15, method: "tv_distance" }) as DetectionResult; setVerdict(detection); const evidence = await api.getEvidence(investigationId); download(`q-shield-evidence-${investigationId.slice(0, 8)}.json`, JSON.stringify({ config, baseline_experiment_id: baselineId, attack_experiment_id: attack.experiment_id, detection, evidence }, null, 2), "application/json"); setNotice(`Attack and detection complete. ${detection.evidence_count} evidence events were exported as JSON.`); } catch (caught) { setError(caught instanceof Error ? caught.message : "Attack detection failed. Check the backend logs."); } finally { setIsExecuting(false); } };
 
-  const generateSeed = () => setSeed(Math.floor(10000 + Math.random() * 90000));
-
-  const runBaseline = async () => {
-    setIsExecuting(true);
-    try {
-      const inv = await api.createInvestigation({
-        name: `EXP-${Date.now().toString().slice(-6)}`,
-        protocol: "teleportation_qds",
-      });
-      const res = await api.runBaselineExperiment(inv.id || "mock_id", {
-        state: "|0>",
-        shots,
-        seed,
-        measurement_basis: "Z",
-      });
-      
-      if (res.quantum_result) {
-        setMetrics({
-          fidelity: res.quantum_result.fidelity || 0.942,
-          qber: 100 * (1 - (res.quantum_result.fidelity || 0.942)), // rough estimation for display
-          entropy: 0.88,
-          purity: 0.96,
-        });
-        if (res.quantum_result.measurement_counts) {
-          setCounts(res.quantum_result.measurement_counts);
-        }
-      }
-    } catch (e) {
-      console.error("API Error, using fallback data", e);
-      // Fallback update to show it "did" something
-      setMetrics({
-        fidelity: 0.965,
-        qber: 2.1,
-        entropy: 0.85,
-        purity: 0.98,
-      });
-    } finally {
-      setIsExecuting(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-full min-h-[calc(100vh-4rem)]">
-      {/* A) SUB-HEADER BAR */}
-      <div className="bg-surface-container h-14 border-b border-outline-variant flex items-center justify-between px-6 shrink-0">
-        <div className="flex items-center gap-4">
-          <span className="text-label-md text-on-surface-variant uppercase tracking-widest">
-            EXP-994A1
-          </span>
-          <span className="text-on-surface text-label-md font-bold uppercase tracking-widest">
-            QDS TELEPORTATION PROTOCOL
-          </span>
-          <div className="flex items-center gap-2 bg-surface-container-high border border-outline-variant px-2 py-1 rounded">
-            <span className="w-1.5 h-1.5 bg-tertiary"></span>
-            <span className="text-label-sm text-tertiary uppercase tracking-widest">
-              CALIBRATED
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="px-3 py-1.5 bg-surface-container-high border border-outline-variant text-label-sm text-on-surface hover:text-primary transition-colors tracking-widest">
-            SAVE CFG
-          </button>
-          <button className="px-3 py-1.5 bg-surface-container-high border border-outline-variant text-label-sm text-on-surface hover:text-primary transition-colors tracking-widest flex items-center gap-1">
-            PRESET <span className="material-symbols-outlined text-[14px]">expand_more</span>
-          </button>
-          <button className="px-3 py-1.5 bg-surface-container-high border border-outline-variant text-label-sm text-on-surface hover:text-primary transition-colors tracking-widest">
-            EXPORT QASM 3.0
-          </button>
-        </div>
-      </div>
-
-      {/* B) MAIN GRID */}
-      <div className="flex-1 p-6 grid grid-cols-1 xl:grid-cols-12 gap-6 overflow-y-auto no-scrollbar">
-        
-        {/* LEFT PANEL */}
-        <div className="xl:col-span-4 flex flex-col gap-6">
-          <div className="bg-surface-container-lowest border border-outline-variant p-4">
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-outline-variant">
-              <h2 className="text-label-md text-on-surface font-bold tracking-widest flex items-center gap-2">
-                <span className="material-symbols-outlined text-[16px]">settings</span>
-                EXPERIMENT PARAMETERS
-              </h2>
-              <span className="text-label-sm text-on-surface-variant tracking-widest">CFG.V2.4</span>
-            </div>
-
-            {/* Target Protocol */}
-            <div className="mb-6">
-              <h3 className="text-label-sm text-on-surface-variant tracking-widest mb-3">TARGET PROTOCOL</h3>
-              <div className="grid grid-cols-2 gap-2">
-                <button className="bg-surface-container-high border border-primary text-primary px-3 py-2 text-label-sm tracking-widest text-left">
-                  TELEPORTATION
-                </button>
-                <button className="bg-surface-container border border-outline-variant text-on-surface-variant px-3 py-2 text-label-sm tracking-widest text-left hover:border-outline">
-                  BB84 QKD
-                </button>
-                <button className="bg-surface-container border border-outline-variant text-on-surface-variant px-3 py-2 text-label-sm tracking-widest text-left hover:border-outline">
-                  E91 ENTANGLED
-                </button>
-                <button className="bg-surface-container border border-outline-variant text-on-surface-variant px-3 py-2 text-label-sm tracking-widest text-left hover:border-outline">
-                  QDS SIGNATURES
-                </button>
-              </div>
-            </div>
-
-            {/* Register Specification */}
-            <div className="mb-6">
-              <h3 className="text-label-sm text-on-surface-variant tracking-widest mb-3">REGISTER SPECIFICATION</h3>
-              <div className="flex flex-col gap-3">
-                <div className="flex justify-between items-center bg-surface-container px-3 py-2 border border-outline-variant">
-                  <span className="text-label-sm text-on-surface tracking-widest">ALLOCATED QUBITS</span>
-                  <span className="text-label-sm text-secondary font-bold">3</span>
-                </div>
-                <div className="flex justify-between items-center bg-surface-container px-3 py-2 border border-outline-variant">
-                  <span className="text-label-sm text-on-surface tracking-widest">SHOTS</span>
-                  <select 
-                    value={shots} 
-                    onChange={(e) => setShots(Number(e.target.value))}
-                    className="bg-transparent text-secondary text-label-sm font-bold text-right outline-none cursor-pointer"
-                  >
-                    <option value="500">500</option>
-                    <option value="1000">1000</option>
-                    <option value="4096">4096</option>
-                    <option value="8192">8192</option>
-                  </select>
-                </div>
-                <div className="flex justify-between items-center bg-surface-container px-3 py-2 border border-outline-variant">
-                  <span className="text-label-sm text-on-surface tracking-widest">RNG SEED</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-label-sm text-secondary font-bold">{seed}</span>
-                    <button onClick={generateSeed} className="text-outline hover:text-on-surface transition-colors flex items-center">
-                      <span className="material-symbols-outlined text-[14px]">refresh</span>
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-1 text-label-sm text-on-surface-variant tracking-widest">
-                  MAPPING: q[0]→A, q[1]→EPR_A, q[2]→EPR_B
-                </div>
-              </div>
-            </div>
-
-            {/* Physical Noise */}
-            <div className="mb-6">
-              <h3 className="text-label-sm text-on-surface-variant tracking-widest mb-3">PHYSICAL NOISE & CHANNEL</h3>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" defaultChecked className="accent-primary" />
-                  <span className="text-label-sm text-on-surface tracking-widest">DEPOLARIZING CHANNEL</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" defaultChecked className="accent-primary" />
-                  <span className="text-label-sm text-on-surface tracking-widest">THERMAL RELAXATION</span>
-                </div>
-                <div className="mt-2">
-                  <div className="flex justify-between items-end mb-2">
-                    <span className="text-label-sm text-on-surface tracking-widest">FIBER DISTANCE</span>
-                    <span className="text-label-sm text-secondary">50 KM</span>
-                  </div>
-                  <input type="range" min="1" max="100" defaultValue="50" className="w-full accent-secondary h-1 bg-surface-container-high appearance-none" />
-                </div>
-                <div className="text-label-sm text-on-surface-variant tracking-widest mt-1">
-                  ATTENUATION: 0.2 DB/KM (STANDARD TELECOM)
-                </div>
-              </div>
-            </div>
-
-            <button 
-              onClick={runBaseline}
-              disabled={isExecuting}
-              className={`w-full py-3 mt-4 text-label-md tracking-widest font-bold uppercase transition-colors flex items-center justify-center gap-2 ${
-                isExecuting 
-                  ? "bg-surface-container-high text-outline cursor-not-allowed border border-outline-variant" 
-                  : "bg-[#00373a] text-secondary border border-secondary hover:bg-secondary hover:text-[#00373a]"
-              }`}
-            >
-              {isExecuting ? (
-                <>
-                  <span className="material-symbols-outlined animate-spin text-[16px]">sync</span>
-                  EXECUTING AER BACKEND...
-                </>
-              ) : (
-                "RUN QUANTUM BASELINE"
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* RIGHT PANEL */}
-        <div className="xl:col-span-8 flex flex-col gap-6">
-          <div className="bg-surface-container-lowest border border-outline-variant p-4">
-            <h2 className="text-label-md text-on-surface font-bold tracking-widest mb-4 flex items-center justify-between">
-              <span>CIRCUIT ARCHITECTURE: TELEPORTATION GATEWAY</span>
-              <span className="text-on-surface-variant font-normal">DEPTH: 5 | GATES: 8</span>
-            </h2>
-            <TeleportationCircuitSVG />
-          </div>
-
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            {/* Histogram */}
-            <div className="xl:col-span-7 bg-surface-container-lowest border border-outline-variant p-4">
-              <h2 className="text-label-md text-on-surface font-bold tracking-widest mb-4">
-                MEASUREMENT HISTOGRAM
-              </h2>
-              <HistogramSVG counts={counts} />
-              <div className="mt-4 pt-4 border-t border-outline-variant text-label-sm text-on-surface-variant tracking-widest flex justify-between">
-                <span>CHI-SQUARED: 2.14</span>
-                <span>P-VALUE: 0.85 (UNIFORM)</span>
-              </div>
-            </div>
-
-            {/* Metrics Vector */}
-            <div className="xl:col-span-5 bg-surface-container-lowest border border-outline-variant p-4">
-              <h2 className="text-label-md text-on-surface font-bold tracking-widest mb-4">
-                STATE INTEGRITY VECTOR
-              </h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-surface-container p-3 border border-outline-variant">
-                  <div className="text-label-sm text-on-surface-variant tracking-widest mb-1">FIDELITY F(|ψ⟩,|ψ'⟩)</div>
-                  <div className="text-headline-lg text-primary font-bold">{metrics.fidelity.toFixed(3)}</div>
-                </div>
-                <div className="bg-surface-container p-3 border border-outline-variant">
-                  <div className="text-label-sm text-on-surface-variant tracking-widest mb-1">QBER</div>
-                  <div className="text-headline-lg text-error font-bold">{metrics.qber.toFixed(2)}%</div>
-                </div>
-                <div className="bg-surface-container p-3 border border-outline-variant">
-                  <div className="text-label-sm text-on-surface-variant tracking-widest mb-1">VON NEUMANN (S)</div>
-                  <div className="text-headline-lg text-secondary font-bold">{metrics.entropy.toFixed(2)}</div>
-                </div>
-                <div className="bg-surface-container p-3 border border-outline-variant">
-                  <div className="text-label-sm text-on-surface-variant tracking-widest mb-1">PURITY Tr(ρ²)</div>
-                  <div className="text-headline-lg text-tertiary font-bold">{metrics.purity.toFixed(2)}</div>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-outline-variant flex items-center justify-between">
-                <span className="text-label-sm text-on-surface-variant tracking-widest">EPR STATE:</span>
-                <span className="text-label-sm text-on-surface tracking-widest font-bold">|Φ⁺⟩ = (|00⟩ + |11⟩)/√2</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* C) WORKFLOW BRIDGE FOOTER */}
-      <div className="bg-surface-container border-t border-outline-variant p-4 shrink-0 flex items-center justify-between z-10 relative">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-tertiary border border-tertiary px-3 py-1.5 bg-[#00371a] bg-opacity-30">
-            <span className="material-symbols-outlined text-[16px]">check_circle</span>
-            <span className="text-label-md tracking-widest font-bold uppercase">BASELINE CALIBRATION VERIFIED</span>
-          </div>
-          <span className="text-label-md text-on-surface-variant tracking-widest uppercase">
-            READY FOR STAGE 2
-          </span>
-        </div>
-        <button className="bg-primary text-on-primary px-6 py-2 text-label-md font-bold tracking-widest uppercase hover:bg-opacity-90 transition-colors">
-          PROCEED TO ATTACK LAB WITH THIS BASELINE
-        </button>
-      </div>
-    </div>
-  );
+  return <div id="command-center" className="flex flex-col min-h-[calc(100vh-4rem)]">
+    <div className="bg-surface-container min-h-14 border-b border-outline-variant flex flex-wrap items-center justify-between gap-3 px-6 py-3"><div className="flex items-center gap-4"><span className="text-label-md text-on-surface-variant uppercase tracking-widest">{investigationId ? `EXP-${investigationId.slice(0, 5)}` : "NEW EXPERIMENT"}</span><span className="text-on-surface text-label-md font-bold uppercase tracking-widest">{protocol}</span></div><div className="flex items-center gap-3"><button onClick={saveConfig} className="px-3 py-1.5 bg-surface-container-high border border-outline-variant text-label-sm text-on-surface hover:text-primary">SAVE CFG</button><button onClick={loadConfig} className="px-3 py-1.5 bg-surface-container-high border border-outline-variant text-label-sm text-on-surface hover:text-primary">LOAD CFG</button><button onClick={() => download("q-shield-teleportation.qasm", circuitQasm(state), "text/plain")} className="px-3 py-1.5 bg-surface-container-high border border-outline-variant text-label-sm text-on-surface hover:text-primary">EXPORT QASM 3.0</button></div></div>
+    <div className="flex-1 p-6 grid grid-cols-1 xl:grid-cols-12 gap-6"><section className="xl:col-span-4"><div className="bg-surface-container-lowest border border-outline-variant p-4"><h2 className="text-label-md text-on-surface font-bold tracking-widest mb-4 pb-2 border-b border-outline-variant">EXPERIMENT PARAMETERS</h2><h3 className="text-label-sm text-on-surface-variant tracking-widest mb-3">TARGET PROTOCOL</h3><div className="grid grid-cols-2 gap-2 mb-6">{PROTOCOLS.map((item) => <button key={item} onClick={() => setProtocol(item)} className={`px-3 py-2 text-label-sm tracking-widest text-left border ${protocol === item ? "bg-surface-container-high border-primary text-primary" : "bg-surface-container border-outline-variant text-on-surface-variant hover:border-outline"}`}>{item}</button>)}</div><div className="space-y-3 mb-6"><label className="flex justify-between items-center bg-surface-container px-3 py-2 border border-outline-variant"><span className="text-label-sm">SHOTS</span><select value={shots} onChange={(event) => setShots(Number(event.target.value))} className="bg-transparent text-secondary font-bold outline-none"><option value="500">500</option><option value="1000">1000</option><option value="4096">4096</option><option value="8192">8192</option></select></label><label className="flex justify-between items-center bg-surface-container px-3 py-2 border border-outline-variant"><span className="text-label-sm">INPUT STATE</span><select value={state} onChange={(event) => setState(event.target.value)} className="bg-transparent text-secondary font-bold outline-none"><option>|0&gt;</option><option>|1&gt;</option><option>|+&gt;</option><option>|-&gt;</option></select></label><div className="flex justify-between items-center bg-surface-container px-3 py-2 border border-outline-variant"><span className="text-label-sm">RNG SEED</span><div className="flex gap-2"><span className="text-secondary font-bold">{seed}</span><button onClick={() => setSeed(Math.floor(10000 + Math.random() * 90000))} aria-label="Generate random seed" className="text-outline hover:text-on-surface">↻</button></div></div></div><div className="border-t border-outline-variant pt-4 mb-6"><h3 className="text-label-sm text-on-surface-variant tracking-widest mb-3">ATTACK TEST CONFIGURATION</h3><label className="flex justify-between items-center bg-surface-container px-3 py-2 border border-outline-variant mb-3"><span className="text-label-sm">VECTOR</span><select value={attackType} onChange={(event) => setAttackType(event.target.value as typeof attackType)} className="bg-transparent text-secondary font-bold outline-none">{ATTACKS.map((item) => <option key={item} value={item}>{item.toUpperCase()}</option>)}</select></label><label className="block text-label-sm text-on-surface-variant">INTENSITY: <span className="text-secondary">{Math.round(attackIntensity * 100)}%</span><input type="range" min="0" max="1" step="0.05" value={attackIntensity} onChange={(event) => setAttackIntensity(Number(event.target.value))} className="w-full mt-2 accent-secondary" /></label></div><button onClick={runBaseline} disabled={isExecuting} className="w-full py-3 text-label-md tracking-widest font-bold bg-[#00373a] text-secondary border border-secondary disabled:opacity-50">{isExecuting ? "EXECUTING…" : "RUN QUANTUM BASELINE"}</button></div></section>
+      <section className="xl:col-span-8 space-y-6"><div className="bg-surface-container-lowest border border-outline-variant p-4"><h2 className="text-label-md text-on-surface font-bold tracking-widest mb-4">CIRCUIT ARCHITECTURE: TELEPORTATION GATEWAY</h2><Circuit /></div><div className="grid grid-cols-1 xl:grid-cols-12 gap-6"><div className="xl:col-span-7 bg-surface-container-lowest border border-outline-variant p-4"><h2 className="text-label-md text-on-surface font-bold tracking-widest">MEASUREMENT HISTOGRAM</h2><Histogram counts={counts} /></div><div className="xl:col-span-5 bg-surface-container-lowest border border-outline-variant p-4"><h2 className="text-label-md text-on-surface font-bold tracking-widest mb-4">STATE INTEGRITY VECTOR</h2><div className="grid grid-cols-2 gap-4">{[["FIDELITY", metrics.fidelity.toFixed(3), "text-primary"], ["QBER", `${metrics.qber.toFixed(2)}%`, "text-error"], ["ENTROPY", metrics.entropy.toFixed(2), "text-secondary"], ["PURITY", metrics.purity.toFixed(2), "text-tertiary"]].map(([label, value, colour]) => <div className="bg-surface-container p-3 border border-outline-variant" key={label}><div className="text-label-sm text-on-surface-variant">{label}</div><div className={`text-headline-lg font-bold ${colour}`}>{value}</div></div>)}</div></div></div><div className="border border-outline-variant bg-surface-container-lowest p-4" aria-live="polite"><p className="text-label-md text-on-surface">{notice}</p>{error && <p className="text-error text-label-sm mt-2">{error}</p>}{verdict && <div className="mt-3 border-t border-outline-variant pt-3"><span className={`font-bold tracking-widest ${verdict.decision === "ATTACK" ? "text-error" : "text-tertiary"}`}>VERDICT: {verdict.decision}</span><p className="text-label-sm text-on-surface-variant mt-1">Confidence {(verdict.confidence * 100).toFixed(0)}% — {verdict.explanation}</p></div>}</div></section></div>
+    <div className="bg-surface-container border-t border-outline-variant p-4 flex flex-wrap gap-4 items-center justify-between"><span className="text-label-md text-on-surface-variant tracking-widest uppercase">{baselineId ? "BASELINE CALIBRATION VERIFIED — READY FOR STAGE 2" : "RUN A BASELINE TO UNLOCK STAGE 2"}</span><button onClick={runAttackAndDetection} disabled={!baselineId || isExecuting} className="bg-primary text-on-primary px-6 py-2 text-label-md font-bold tracking-widest uppercase disabled:opacity-50">{isExecuting ? "PROCESSING…" : "RUN ATTACK LAB & EXPORT EVIDENCE"}</button></div>
+  </div>;
 }

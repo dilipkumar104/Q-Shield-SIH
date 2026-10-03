@@ -4,14 +4,10 @@ import { useState } from "react";
 import "./globals.css";
 
 const navItems = [
-  "Command Center",
-  "Simulation Lab",
-  "Attack Lab",
-  "Investigations",
-  "Evidence Forensics",
-  "Experiment Comparison",
-  "Reproducibility Metadata",
-  "Presentation Mode",
+  { label: "Command Center", href: "#command-center", icon: "dashboard" },
+  { label: "Simulation Lab", href: "#simulation-lab", icon: "science" },
+  { label: "Attack Lab", href: "#attack-lab", icon: "security" },
+  { label: "Evidence Forensics", href: "#evidence-forensics", icon: "fact_check" },
 ];
 
 export default function RootLayout({
@@ -94,20 +90,21 @@ export default function RootLayout({
           <nav className="flex-1 py-4 overflow-y-auto no-scrollbar">
             <ul className="flex flex-col">
               {navItems.map((item) => (
-                <li key={item}>
-                  <button
-                    onClick={() => setActiveNav(item)}
+                <li key={item.label}>
+                  <a
+                    href={item.href}
+                    onClick={() => setActiveNav(item.label)}
                     className={`w-full text-left px-6 py-3 text-label-md uppercase tracking-widest transition-colors flex items-center gap-3 ${
-                      activeNav === item
+                      activeNav === item.label
                         ? "bg-surface-container-high text-primary border-l-2 border-primary"
                         : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface border-l-2 border-transparent"
                     }`}
                   >
                     <span className="material-symbols-outlined text-[16px]">
-                      {item === "Simulation Lab" ? "science" : "terminal"}
+                      {item.icon}
                     </span>
-                    {item}
-                  </button>
+                    {item.label}
+                  </a>
                 </li>
               ))}
             </ul>
