@@ -1,4 +1,4 @@
-# 🛡️ Q-SHIELD — Quantum Threat Detection Dashboard
+# 🛡️ Quantum Kavach — Quantum Threat Detection Dashboard
 
 <div align="center">
 
@@ -16,9 +16,9 @@
 
 ## 📖 Overview
 
-**Q-SHIELD** is an enterprise-grade, post-quantum cybersecurity and digital signature verification system. Designed for critical infrastructure and blockchain networks, Q-SHIELD combines **Qiskit Aer** quantum simulation with rigorous statistical hypothesis testing to detect eavesdropping, state tampering, forgery, and replay attacks on quantum channels in real-time.
+**Quantum Kavach** is an enterprise-grade, post-quantum cybersecurity and digital signature verification system. Designed for critical infrastructure and blockchain networks, Quantum Kavach combines **Qiskit Aer** quantum simulation with rigorous statistical hypothesis testing to detect eavesdropping, state tampering, forgery, and replay attacks on quantum channels in real-time.
 
-By measuring statistical divergences (such as **Total Variation (TV) distance**, **Chi-Squared tests**, and **Quantum Bit Error Rate (QBER)**) against calibrated quantum baselines, Q-SHIELD identifies malicious interference and creates a cryptographic, tamper-proof forensic audit trail.
+By measuring statistical divergences (such as **Total Variation (TV) distance**, **Chi-Squared tests**, and **Quantum Bit Error Rate (QBER)**) against calibrated quantum baselines, Quantum Kavach identifies malicious interference and creates a cryptographic, tamper-proof forensic audit trail.
 
 ---
 
@@ -73,7 +73,7 @@ The script will automatically:
 3. Install frontend npm packages.
 4. Launch the FastAPI backend on `http://localhost:8000`.
 5. Launch the Next.js frontend on `http://localhost:3000`.
-6. Automatically open your browser to the Q-SHIELD dashboard.
+6. Automatically open your browser to the Quantum Kavach dashboard.
 
 ---
 

@@ -3,7 +3,7 @@ from .investigation_service import InvestigationService
 from .experiment_service import ExperimentService
 from .detection_service import DetectionService
 from .exceptions import (
-    QShieldException,
+    QuantumKavachException,
     InvestigationNotFound,
     ExperimentNotFound,
     QuantumExecutionFailed,
@@ -16,7 +16,7 @@ __all__ = [
     "InvestigationService",
     "ExperimentService",
     "DetectionService",
-    "QShieldException",
+    "QuantumKavachException",
     "InvestigationNotFound",
     "ExperimentNotFound",
     "QuantumExecutionFailed",

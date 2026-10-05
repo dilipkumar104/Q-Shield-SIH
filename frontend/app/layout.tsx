@@ -30,13 +30,14 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
           rel="stylesheet"
         />
+        <title>QUANTUM KAVACH - Quantum Threat Detection</title>
       </head>
       <body className="bg-surface text-on-surface font-body antialiased no-scrollbar overflow-x-hidden min-h-screen flex flex-col">
         {/* FIXED HEADER */}
         <header className="fixed top-0 left-0 right-0 h-16 bg-surface-container-highest border-b border-outline-variant flex items-center justify-between px-6 z-50">
           <div className="flex items-center gap-4">
             <h1 className="font-heading text-headline-lg font-bold text-primary tracking-widest uppercase">
-              Q-SHIELD
+              QUANTUM KAVACH
             </h1>
             <span className="bg-surface-container-low border border-outline-variant px-2 py-1 text-label-md text-on-surface-variant uppercase tracking-widest rounded">
               SIH26141

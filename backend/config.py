@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     """Application settings from environment variables."""
 
     # Application
-    app_name: str = "Q-Shield"
+    app_name: str = "Quantum Kavach"
     app_version: str = "0.1.0"
     debug: bool = False
     environment: Literal["development", "staging", "production"] = "development"
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     cors_headers: list[str] = ["*"]
 
     # Database
-    database_url: str = "sqlite:///./q_shield.db"
+    database_url: str = "sqlite:///./quantum_kavach.db"
     database_echo: bool = False
 
     # Quantum

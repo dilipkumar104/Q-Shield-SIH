@@ -2,7 +2,7 @@
 
 ### ✅ Backend (FastAPI on port 8000)
 
-- **Health check**: `{"status":"healthy","app":"Q-Shield","version":"0.1.0"}`
+- **Health check**: `{"status":"healthy","app":"Quantum Kavach","version":"0.1.0"}`
 - **Investigation creation**: ✅ Works
 - **Baseline experiment**: ✅ Runs quantum teleportation simulation
 - **Attack experiment (forgery)**: ✅ Injects forgery attack
@@ -11,7 +11,7 @@
 
 ### ✅ Frontend (Next.js on port 3000)
 
-- **UI loads**: ✅ Q-SHIELD dashboard accessible at http://localhost:3000
+- **UI loads**: ✅ Quantum Kavach dashboard accessible at http://localhost:3000
 - **Simulation Lab page**: ✅ Displays circuit, histogram, and metrics
 
 ### ✅ Full Quantum Teleportation Flow Verified

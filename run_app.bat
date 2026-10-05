@@ -1,10 +1,10 @@
 @echo off
 setlocal EnableDelayedExpansion
-title Q-SHIELD Launcher
+title Quantum Kavach Launcher
 color 0A
 
 REM =====================================================================
-REM  Q-SHIELD - One-Click Launcher (SIH26141)
+REM  Quantum Kavach - One-Click Launcher (SIH26141)
 REM  Starts FastAPI backend + Next.js frontend, then opens browser.
 REM =====================================================================
 
@@ -20,11 +20,17 @@ set "PY=%ROOT%backend\venv\Scripts\python.exe"
 cls
 echo.
 echo  ============================================================
-echo     ___        _____ _   _ ___ _____ _     ____
-echo    / _ \      / ____^| ^| ^| ^|_ _^| ____^| ^|   ^|  _ \
-echo   ^| ^| ^| ^|____^| (___ ^| ^|_^| ^|^| ^|^|  _^| ^| ^|   ^| ^| ^| ^|
-echo   ^| ^|_^| ^|_____^|\___ \^|  _  ^|^| ^|^| ^|___^| ^|___^| ^|_^| ^|
-echo    \__\_\     ^|____/^|_^| ^|_^|___^|_____^|_____^|____/
+echo    ___  _   _    _    _   _ _____ _   _ __  __
+echo   / _ \^| ^| ^| ^|  / \  ^| \ ^| ^|_   _^| ^| ^| ^|  \/  ^|
+echo  ^| ^| ^| ^| ^| ^| ^| / _ \ ^|  \^| ^| ^| ^| ^| ^| ^| ^| ^|\/^| ^|
+echo  ^| ^|_^| ^| ^|_^| ^|/ ___ \^| ^|\  ^| ^| ^| ^| ^|_^| ^| ^|  ^| ^|
+echo   \__\_\\___//_/   \_\_^| \_^| ^|_^|  \___/^|_^|  ^|_^|
+echo.
+echo     _  __    ___     __  _    ____ _   _
+echo    ^| ^|/ /   / \ \   / / / \  / ___^| ^| ^| ^|
+echo    ^| ' /   / _ \ \ / / / _ \^| ^|   ^| ^|_^| ^|
+echo    ^| . \  / ___ \ V / / ___ \ ^|___^|  _  ^|
+echo    ^|_^|\_\/_/   \_\_/ /_/   \_\____^|_^| ^|_^|
 echo.
 echo    Quantum Threat Detection Dashboard  -  SIH26141
 echo  ============================================================
@@ -101,10 +107,10 @@ echo  [OK] Frontend ready.
 REM ---------- 5. Launch both services ----------
 echo  [5/6] Starting services...
 
-start "Q-SHIELD Backend" /min cmd /c "cd /d "%ROOT%backend" && "%PY%" -u main.py"
+start "Quantum Kavach Backend" /min cmd /c "cd /d "%ROOT%backend" && "%PY%" -u main.py"
 echo        Backend starting on %BACKEND_URL%
 
-start "Q-SHIELD Frontend" /min cmd /c "cd /d "%ROOT%frontend" && npm run dev"
+start "Quantum Kavach Frontend" /min cmd /c "cd /d "%ROOT%frontend" && npm run dev"
 echo        Frontend starting on %FRONTEND_URL%
 
 REM ---------- 6. Wait for backend health, then open browser ----------
@@ -135,7 +141,7 @@ start "" "%FRONTEND_URL%"
 
 echo.
 echo  ============================================================
-echo    Q-SHIELD is running!
+echo    Quantum Kavach is running!
 echo.
 echo    Frontend : %FRONTEND_URL%
 echo    Backend  : %BACKEND_URL%
